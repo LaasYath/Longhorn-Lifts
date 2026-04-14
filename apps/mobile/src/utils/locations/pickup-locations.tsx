@@ -1,4 +1,3 @@
-import { BuildingCategory } from "../types/building-category";
 import { Location } from "../types/location";
 
 export const CAMPUS_LOCATIONS: Location[] = [
