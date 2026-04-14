@@ -40,6 +40,9 @@ import {
   UTTangerine,
   UTTurquoise,
 } from "@/src/utils/colors";
+import { Location as LocationType } from "@/src/utils/types/location";
+import { getMatchingPickupLocations } from "@/src/utils/locations/pickup-locations";
+import { getMatchingDropoffLocations } from "@/src/utils/locations/dropoff-locations";
 
 const Home = () => {
   const sheetRef = useRef<BottomSheet>(null);
@@ -68,6 +71,11 @@ const Home = () => {
 
   const [startLocationText, setStartLocationText] = useState<string>("");
   const [destinationText, setDestinationText] = useState<string>("");
+  const [focusedInput, setFocusedInput] = useState<"pickup" | "dropoff" | null>(
+    null,
+  );
+  const [pickupList, setPickupList] = useState<LocationType[]>([]);
+  const [dropoffList, setDropoffList] = useState<LocationType[]>([]);
   const [startLocationAddress] = useState<string>(
     "Select your pickup location",
   );
@@ -123,6 +131,46 @@ const Home = () => {
 
     requestLocationPermissions();
   }, []);
+
+  useEffect(() => {
+    if (startLocationText.length > 0) {
+      setPickupList(getMatchingPickupLocations(startLocationText));
+    } else {
+      setPickupList([]);
+    }
+  }, [startLocationText]);
+
+  useEffect(() => {
+    if (destinationText.length > 0) {
+      setDropoffList(getMatchingDropoffLocations(destinationText));
+    } else {
+      setDropoffList([]);
+    }
+  }, [destinationText]);
+
+  const resetMapView = (location: LocationType) => {
+    setPickupList([]);
+    setDropoffList([]);
+    mapRef.current?.animateToRegion(
+      {
+        latitude: location.lat,
+        longitude: location.lon,
+        latitudeDelta: 0.02,
+        longitudeDelta: 0.02,
+      },
+      500,
+    );
+  };
+
+  const clickedPickupLocation = (location: LocationType) => () => {
+    setStartLocationText(location.name);
+    resetMapView(location);
+  };
+
+  const clickedDropoffLocation = (location: LocationType) => () => {
+    setDestinationText(location.name);
+    resetMapView(location);
+  };
 
   return (
     <View className="bg-white flex-1 flex-col items-center">
@@ -348,9 +396,11 @@ const Home = () => {
                   <View className="flex-col gap-1">
                     <TextInput
                       ref={startLocationRef}
-                      onFocus={() =>
-                        snapIndex !== 2 && sheetRef.current?.expand()
-                      }
+                      onFocus={() => {
+                        setFocusedInput("pickup");
+                        snapIndex !== 2 && sheetRef.current?.expand();
+                      }}
+                      onBlur={() => setFocusedInput(null)}
                       className="font-medium text-lg flex-1"
                       placeholder="Where from?"
                       placeholderTextColor={gray900}
@@ -373,9 +423,11 @@ const Home = () => {
                   <View className="flex-col gap-1">
                     <TextInput
                       ref={destinationRef}
-                      onFocus={() =>
-                        snapIndex !== 2 && sheetRef.current?.expand()
-                      }
+                      onFocus={() => {
+                        setFocusedInput("dropoff");
+                        snapIndex !== 2 && sheetRef.current?.expand();
+                      }}
+                      onBlur={() => setFocusedInput(null)}
                       className="font-medium text-lg flex-1"
                       placeholder="Where to?"
                       placeholderTextColor={gray900}
@@ -400,25 +452,40 @@ const Home = () => {
             />
           </View>
           <View className="relative px-5 pt-4 flex-col gap-4 justify-start">
-            {[...Array(10)].map((_, index, array) => (
-              <View
+            {(focusedInput === "pickup"
+              ? pickupList
+              : focusedInput === "dropoff"
+                ? dropoffList
+                : []
+            ).map((location, index) => (
+              <Pressable
                 key={index}
-                className={`flex-col ${index === array.length - 1 ? "" : "border-b"} border-gray-200 pb-4`}
+                onPress={
+                  focusedInput === "pickup"
+                    ? clickedPickupLocation(location)
+                    : clickedDropoffLocation(location)
+                }
               >
-                <View className="flex-row gap-2 items-center">
-                  <MapPinIcon color={slate900} size="24" />
-                  <View className="flex-1 flex-col gap-2 justify-around">
-                    <FontText className="font-medium text-lg/1">
-                      Texan Pearl
-                    </FontText>
-                    <FontText className="font-regular text-[14px]/1 text-gray-500">
-                      2515 Pearl St
-                    </FontText>
+                <View
+                  key={index}
+                  className={`flex-col ${index === (focusedInput === "pickup" ? pickupList : dropoffList).length - 1 ? "" : "border-b"} border-gray-200 pb-4`}
+                >
+                  <View className="flex-row gap-2 items-center">
+                    <MapPinIcon color={slate900} size="24" />
+                    <View className="flex-1 flex-col gap-2 justify-around">
+                      <FontText className="font-medium text-lg/1">
+                        {location.name}
+                      </FontText>
+                      <FontText className="font-regular text-[14px]/1 text-gray-500">
+                        {location.address}
+                      </FontText>
+                    </View>
+                    <StarIcon color={slate900} size="24" />
                   </View>
-                  <StarIcon color={slate900} size="24" />
                 </View>
-              </View>
+              </Pressable>
             ))}
+            ;
           </View>
         </BottomSheetScrollView>
       </BottomSheet>
