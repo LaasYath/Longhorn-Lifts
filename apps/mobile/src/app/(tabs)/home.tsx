@@ -19,7 +19,7 @@ import {
   View,
 } from "react-native";
 import BottomSheet, {
-  BottomSheetScrollView,
+  BottomSheetFlatList,
   TouchableOpacity as TO,
 } from "@gorhom/bottom-sheet";
 import Animated, { Easing, FadeInUp, FadeOutUp } from "react-native-reanimated";
@@ -45,6 +45,11 @@ import { getMatchingPickupLocations } from "@/src/utils/locations/pickup-locatio
 import { getMatchingDropoffLocations } from "@/src/utils/locations/dropoff-locations";
 
 const Home = () => {
+  let _style: StyleProp<TextStyle> = {};
+  if (Platform.OS === "ios") {
+    _style.lineHeight = 0;
+  }
+
   const sheetRef = useRef<BottomSheet>(null);
   const mapRef = useRef<MapView>(null);
   const startLocationRef = useRef<TextInput>(null);
@@ -71,20 +76,17 @@ const Home = () => {
 
   const [startLocationText, setStartLocationText] = useState<string>("");
   const [destinationText, setDestinationText] = useState<string>("");
-  const [focusedInput, setFocusedInput] = useState<"pickup" | "dropoff" | null>(
-    null,
+  const [focusedInput, setFocusedInput] = useState<"pickup" | "dropoff">(
+    "pickup",
   );
   const [pickupList, setPickupList] = useState<LocationType[]>([]);
   const [dropoffList, setDropoffList] = useState<LocationType[]>([]);
-  const [startLocationAddress] = useState<string>(
+  const [startLocationAddress, setStartAddress] = useState<string>(
     "Select your pickup location",
   );
-  const [destinationAddress] = useState<string>("Select your destination");
-
-  let _style: StyleProp<TextStyle> = {};
-  if (Platform.OS === "ios") {
-    _style.lineHeight = 0;
-  }
+  const [destinationAddress, setDestinationAddress] = useState<string>(
+    "Select your destination",
+  );
 
   const centerMapOnLocation = (location: Location.LocationObject) => {
     setTimeout(() => {
@@ -133,43 +135,39 @@ const Home = () => {
   }, []);
 
   useEffect(() => {
-    if (startLocationText.length > 0) {
-      setPickupList(getMatchingPickupLocations(startLocationText));
-    } else {
-      setPickupList([]);
-    }
+    setPickupList(getMatchingPickupLocations(startLocationText));
   }, [startLocationText]);
 
   useEffect(() => {
-    if (destinationText.length > 0) {
-      setDropoffList(getMatchingDropoffLocations(destinationText));
-    } else {
-      setDropoffList([]);
-    }
+    setDropoffList(getMatchingDropoffLocations(destinationText));
   }, [destinationText]);
 
-  const resetMapView = (location: LocationType) => {
-    setPickupList([]);
-    setDropoffList([]);
-    mapRef.current?.animateToRegion(
-      {
-        latitude: location.lat,
-        longitude: location.lon,
-        latitudeDelta: 0.02,
-        longitudeDelta: 0.02,
-      },
-      500,
-    );
-  };
+  // const resetMapView = (location: LocationType) => {
+  //   setPickupList([]);
+  //   setDropoffList([]);
+  //   mapRef.current?.animateToRegion(
+  //     {
+  //       latitude: location.lat,
+  //       longitude: location.lon,
+  //       latitudeDelta: 0.02,
+  //       longitudeDelta: 0.02,
+  //     },
+  //     500,
+  //   );
+  // };
 
   const clickedPickupLocation = (location: LocationType) => () => {
     setStartLocationText(location.name);
-    resetMapView(location);
+    setStartAddress(location.address);
+    setFocusedInput("dropoff");
+    if (startLocationRef.current?.isFocused()) {
+      destinationRef.current?.focus();
+    }
   };
 
   const clickedDropoffLocation = (location: LocationType) => () => {
     setDestinationText(location.name);
-    resetMapView(location);
+    setDestinationAddress(location.address);
   };
 
   return (
@@ -376,118 +374,154 @@ const Home = () => {
           </View>
         )}
       >
-        <BottomSheetScrollView
+        <BottomSheetFlatList
           stickyHeaderIndices={[0]}
           overScrollMode={"always"}
           scrollEnabled={
             Platform.OS === "android" ? snapIndex === 2 : undefined
           }
-        >
-          <View className="flex-col mb-[-24px]">
-            <View className="flex-col bg-white">
-              <View className="flex-col rounded-lg">
-                <Pressable
-                  className="bg-slate-50 flex-row mx-5 mt-4 p-4 gap-4 items-center rounded-t-2xl border border-slate-200"
-                  onPress={() => startLocationRef.current?.focus()}
-                >
-                  <View className="bg-[#BF570033] rounded-full items-center justify-center w-[32px] h-[32px]">
-                    <CircleIcon color={UTBurntOrange} weight="fill" size="20" />
-                  </View>
-                  <View className="flex-col gap-1">
-                    <TextInput
-                      ref={startLocationRef}
-                      onFocus={() => {
-                        setFocusedInput("pickup");
-                        snapIndex !== 2 && sheetRef.current?.expand();
-                      }}
-                      onBlur={() => setFocusedInput(null)}
-                      className="font-medium text-lg flex-1"
-                      placeholder="Where from?"
-                      placeholderTextColor={gray900}
-                      onChangeText={(text) => setStartLocationText(text)}
-                      value={startLocationText}
-                      style={_style}
-                    />
-                    <FontText className="text-lg color-[#333F48]">
-                      {startLocationAddress}
-                    </FontText>
-                  </View>
-                </Pressable>
-                <Pressable
-                  className="bg-slate-50 flex-row mx-5 p-4 gap-4 items-center rounded-b-2xl border border-slate-200 mt-[-1px] mb-6"
-                  onPress={() => destinationRef.current?.focus()}
-                >
-                  <View className="bg-[#005F8633] rounded-full items-center justify-center w-[32px] h-[32px]">
-                    <MapPinIcon color={UTBluebonnet} size="20" weight="fill" />
-                  </View>
-                  <View className="flex-col gap-1">
-                    <TextInput
-                      ref={destinationRef}
-                      onFocus={() => {
-                        setFocusedInput("dropoff");
-                        snapIndex !== 2 && sheetRef.current?.expand();
-                      }}
-                      onBlur={() => setFocusedInput(null)}
-                      className="font-medium text-lg flex-1"
-                      placeholder="Where to?"
-                      placeholderTextColor={gray900}
-                      onChangeText={(text) => setDestinationText(text)}
-                      value={destinationText}
-                      style={_style}
-                    />
-                    <FontText className="text-lg color-[#333F48]">
-                      {destinationAddress}
-                    </FontText>
-                  </View>
-                </Pressable>
-              </View>
-            </View>
-            <LinearGradient
-              colors={["#ffffffff", "#ffffff00"]}
-              style={{
-                marginTop: -1,
-                height: 24,
-                zIndex: 50,
-              }}
-            />
-          </View>
-          <View className="relative px-5 pt-4 flex-col gap-4 justify-start">
-            {(focusedInput === "pickup"
-              ? pickupList
-              : focusedInput === "dropoff"
-                ? dropoffList
-                : []
-            ).map((location, index) => (
-              <Pressable
-                key={index}
-                onPress={
-                  focusedInput === "pickup"
-                    ? clickedPickupLocation(location)
-                    : clickedDropoffLocation(location)
-                }
-              >
-                <View
-                  key={index}
-                  className={`flex-col ${index === (focusedInput === "pickup" ? pickupList : dropoffList).length - 1 ? "" : "border-b"} border-gray-200 pb-4`}
-                >
-                  <View className="flex-row gap-2 items-center">
-                    <MapPinIcon color={slate900} size="24" />
-                    <View className="flex-1 flex-col gap-2 justify-around">
-                      <FontText className="font-medium text-lg/1">
-                        {location.name}
-                      </FontText>
-                      <FontText className="font-regular text-[14px]/1 text-gray-500">
-                        {location.address}
+          data={focusedInput === "pickup" ? pickupList : dropoffList}
+          keyboardShouldPersistTaps="handled"
+          ListHeaderComponent={
+            <View className="flex-col mb-[-16px]">
+              <View className="flex-col bg-white pt-4">
+                <View className="flex-col rounded-lg">
+                  <Pressable
+                    className="bg-slate-50 flex-row p-4 gap-4 items-center rounded-t-2xl border border-slate-200"
+                    onPress={() => startLocationRef.current?.focus()}
+                  >
+                    <View className="bg-[#BF570033] rounded-full items-center justify-center w-[32px] h-[32px]">
+                      <CircleIcon
+                        color={UTBurntOrange}
+                        weight="fill"
+                        size="20"
+                      />
+                    </View>
+                    <View className="flex-1 flex-col gap-1">
+                      <TextInput
+                        ref={startLocationRef}
+                        onFocus={() => {
+                          setFocusedInput("pickup");
+                          snapIndex !== 2 && sheetRef.current?.expand();
+                        }}
+                        className="font-medium text-lg flex-1"
+                        placeholder="Where from?"
+                        placeholderTextColor={gray900}
+                        onChangeText={(text) => {
+                          setStartLocationText(text);
+                          if (!startLocationAddress.startsWith("Select")) {
+                            setStartAddress("Select your pickup location");
+                          }
+                        }}
+                        value={startLocationText}
+                        style={_style}
+                      />
+                      <FontText className="text-lg color-[#333F48]">
+                        {startLocationAddress}
                       </FontText>
                     </View>
-                    <StarIcon color={slate900} size="24" />
-                  </View>
+                  </Pressable>
+                  <Pressable
+                    className="bg-slate-50 flex-row p-4 gap-4 items-center rounded-b-2xl border border-slate-200 mt-[-1px] mb-6"
+                    onPress={() => destinationRef.current?.focus()}
+                  >
+                    <View className="bg-[#005F8633] rounded-full items-center justify-center w-[32px] h-[32px]">
+                      <MapPinIcon
+                        color={UTBluebonnet}
+                        size="20"
+                        weight="fill"
+                      />
+                    </View>
+                    <View className="flex-1 flex-col gap-1">
+                      <TextInput
+                        ref={destinationRef}
+                        onFocus={() => {
+                          setFocusedInput("dropoff");
+                          snapIndex !== 2 && sheetRef.current?.expand();
+                        }}
+                        className="font-medium text-lg flex-1"
+                        placeholder="Where to?"
+                        placeholderTextColor={gray900}
+                        onChangeText={(text) => {
+                          setDestinationText(text);
+                          if (!destinationAddress.startsWith("Select")) {
+                            setDestinationAddress("Select your destination");
+                          }
+                        }}
+                        value={destinationText}
+                        style={_style}
+                      />
+                      <FontText className="text-lg color-[#333F48]">
+                        {destinationAddress}
+                      </FontText>
+                    </View>
+                  </Pressable>
                 </View>
-              </Pressable>
-            ))}
-            ;
-          </View>
-        </BottomSheetScrollView>
+              </View>
+              <LinearGradient
+                colors={["#ffffffff", "#ffffff00"]}
+                style={{
+                  marginTop: -1,
+                  height: 24,
+                  zIndex: 50,
+                }}
+              />
+            </View>
+          }
+          renderItem={({ index, item }) => (
+            <TouchableOpacity
+              key={index}
+              onPress={
+                focusedInput === "pickup"
+                  ? clickedPickupLocation(item)
+                  : clickedDropoffLocation(item)
+              }
+            >
+              <View
+                key={index}
+                className={`flex-col ${index === (focusedInput === "pickup" ? pickupList : dropoffList).length - 1 ? "" : "border-b"} border-gray-200 pb-4 pt-2`}
+              >
+                <View className="flex-row gap-2 items-center">
+                  <MapPinIcon color={slate900} size="24" />
+                  <View className="flex-1 flex-col gap-2 justify-around">
+                    <FontText className="font-medium text-lg/1">
+                      {item.name}
+                    </FontText>
+                    <FontText className="font-regular text-[14px]/1 text-gray-500">
+                      {item.address}
+                    </FontText>
+                  </View>
+                  <StarIcon color={slate900} size="24" />
+                </View>
+              </View>
+            </TouchableOpacity>
+          )}
+          ListFooterComponent={
+            (((focusedInput === "pickup" && startLocationText !== "") ||
+              (focusedInput === "dropoff" && destinationText !== "")) && (
+              <TouchableOpacity
+                onPress={() =>
+                  focusedInput === "pickup"
+                    ? (setStartLocationText(""),
+                      setStartAddress("Select your pickup location"))
+                    : (setDestinationText(""),
+                      setDestinationAddress("Select your destination"))
+                }
+              >
+                <FontText className="mt-4">
+                  Clear {focusedInput} selection
+                </FontText>
+              </TouchableOpacity>
+            )) || <View />
+          }
+          contentContainerStyle={{
+            position: "relative",
+            paddingHorizontal: 20,
+            flexDirection: "column",
+            gap: 4,
+            justifyContent: "flex-start",
+          }}
+        ></BottomSheetFlatList>
       </BottomSheet>
     </View>
   );
