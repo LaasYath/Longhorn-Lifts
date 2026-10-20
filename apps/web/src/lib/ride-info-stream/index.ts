@@ -310,17 +310,21 @@ export class RideInfoStream extends DurableObject<CloudflareEnv> {
           await setPickupStopState(ride.pickupStopID, "scheduled", this.env);
           await setDropoffStopState(ride.dropoffStopID, "scheduled", this.env);
           this.sendRouteUpdate(ride.id, "assigned");
-          const subscribers = this.getSubscribers(ride.id);
-          if (subscribers) {
-            const res = await sendRouteUpdateNotification({
-              rideState: "assigned",
-              pushTokens: subscribers.pushTokens,
-              rideID: ride.id,
-              shareCode: subscribers.shareCode,
-              isLeader: subscribers.isLeader,
-            });
-            this.addPushTickets(res);
-          }
+
+          // we ended up not going with driver assigned notification
+          // as there were too many notifications
+
+          // const subscribers = this.getSubscribers(ride.id);
+          // if (subscribers) {
+          //   const res = await sendRouteUpdateNotification({
+          //     rideState: "assigned",
+          //     pushTokens: subscribers.pushTokens,
+          //     rideID: ride.id,
+          //     shareCode: subscribers.shareCode,
+          //     isLeader: subscribers.isLeader,
+          //   });
+          //   this.addPushTickets(res);
+          // }
         }
       }
     }
