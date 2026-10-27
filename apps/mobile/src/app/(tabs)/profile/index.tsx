@@ -143,7 +143,7 @@ const Profile = () => {
             <CaretLeftIcon size={24} color={slate700} />
           </TouchableOpacity>
           <View className="w-full bg-[#EFF6FF] pt-safe-offset-[54px]" />
-          <View className="w-24 h-24 rounded-full bg-slate-50 border border-slate-200 items-center justify-center self-center -mt-10">
+          <View className="w-24 h-24 rounded-full bg-slate-50 border border-slate-200 items-center justify-center self-center -mt-11">
             <View className="w-20 h-20 rounded-full bg-ut-burntorange items-center justify-center">
               <FontText className="text-center text-white text-[24px] font-medium">
                 {user.firstName[0]}
@@ -315,7 +315,7 @@ const Profile = () => {
                   </View>
                 )}
                 {isEditing && (
-                  <View className="flex-1 flex-col mt-[49px] pt-4 px-5">
+                  <View className="flex-1 flex-col pt-4 px-5">
                     <View className="flex flex-col items-start gap-10 mb-5">
                       <EditProfileTextInput
                         fieldName="First Name"
